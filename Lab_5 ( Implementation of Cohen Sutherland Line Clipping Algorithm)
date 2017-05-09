@@ -1,0 +1,158 @@
+/* Author Sridhar Patil */
+#include <GL/glut.h>
+#define outcode int
+double xmin=50,ymin=50, xmax=100,ymax=100;
+const int TOP = 8;
+const int BOTTOM = 4; 
+const int RIGHT = 2;
+const int LEFT = 1;
+
+int accept = 0, done = 0;
+
+struct pt
+{
+	double x0;
+	double yy0;
+	double x1;
+	double yy1;
+} p,s;
+
+
+outcode ComputeOutCode (double x, double y)
+{
+	outcode code = 0;
+	if (y > ymax)              
+		code = TOP;
+	else if (y < ymin)         
+		code = BOTTOM;
+	if (x > xmax)              
+		code = RIGHT;
+	else if (x < xmin)         
+		code = LEFT;
+
+return code;
+}
+
+struct pt CohenSutherlandLineClipAndDraw (struct pt p)
+{
+	outcode outcode0, outcode1, outcodeOut;
+	
+	outcode0 = ComputeOutCode (p.x0, p.yy0);
+	outcode1 = ComputeOutCode (p.x1, p.yy1);
+
+	do{
+		if (!(outcode0 | outcode1))      
+		{
+			accept = 1;
+			done = 1;
+		}
+		else if (outcode0 & outcode1)   
+			done = 1;
+		else
+		{
+			double x, y;
+
+			outcodeOut = outcode0? outcode0: outcode1;
+
+			if (outcodeOut & TOP)          
+			{
+				x = p.x0 + (p.x1 - p.x0) * (ymax - p.yy0)/(p.yy1 - p.yy0);
+				y = ymax;
+			}
+			else if (outcodeOut & BOTTOM)  
+			{
+				x = p.x0 + (p.x1 - p.x0) * (ymin - p.yy0)/(p.yy1 - p.yy0);
+				y = ymin;
+			}
+			else if (outcodeOut & RIGHT)  
+			{
+				y = p.yy0 + (p.yy1 - p.yy0) * (xmax - p.x0)/(p.x1 - p.x0);
+				x = xmax;
+			}
+			else if (outcodeOut & LEFT)                        
+			{
+				y = p.yy0 + (p.yy1 - p.yy0) * (xmin - p.x0)/(p.x1 - p.x0);
+				x = xmin;
+			}
+
+			
+			if (outcodeOut == outcode0)
+			{
+				p.x0 = x;
+				p.yy0 = y;
+				outcode0 = ComputeOutCode (p.x0, p.yy0);
+			}
+			else 
+			{
+				p.x1 = x;
+				p.yy1 = y;
+				outcode1 = ComputeOutCode (p.x1, p.yy1);
+			}
+		}
+	}while (!done);
+
+return p;
+}
+
+int dx=-150,dy=-150;
+void draw(struct pt p)
+{
+	glPushMatrix();
+		glTranslatef(150+dx,150+dx,0);
+		glColor3f(1.0,0.0,0.0);
+		glBegin(GL_LINES);
+			glVertex2d (p.x0, p.yy0);
+			glVertex2d (p.x1, p.yy1);	
+		glEnd();
+
+		glColor3f(0.0, 0.0, 1.0);
+		glBegin(GL_LINE_LOOP);
+		  glVertex2f(xmin, ymin);
+		  glVertex2f(xmax, ymin);
+		  glVertex2f(xmax, ymax);
+		  glVertex2f(xmin, ymax);
+		glEnd();
+	glPopMatrix();
+	
+}
+
+void display()
+{
+	p.x0=120.0;
+	p.yy0=10.0;
+	p.x1=40.0;
+	p.yy1=130.0;
+
+	draw(p);
+	s = CohenSutherlandLineClipAndDraw(p);
+	if (accept)
+	{
+		dx=0;dy=0;
+		draw(s);
+	}
+glFlush();
+}
+
+void myinit()
+{
+	glClearColor(1.0,1.0,1.0,1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(1.0,0.0,0.0);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0.0,499.0,0.0,499.0);
+	glMatrixMode(GL_MODELVIEW);
+}
+
+int main(int argc, char** argv)
+{
+	glutInit(&argc,argv);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	glutInitWindowSize(500,500);
+	glutInitWindowPosition(0,0);
+	glutCreateWindow("Cohen Sutherland Line Clipping Algorithm");
+	glutDisplayFunc(display);
+	myinit();
+	glutMainLoop();
+return 0;
+}
